@@ -1,11 +1,11 @@
 import { Image, StyleSheet, View, useWindowDimensions } from "react-native";
 import type { ImageSourcePropType } from "react-native";
 
-type Props = {
+type MainPictureProps = {
   source: ImageSourcePropType;
 };
 
-export function MainPicture({ source }: Props) {
+export function MainPicture({ source }: MainPictureProps) {
   const { height: windowHeight } = useWindowDimensions();
   const imageHeight = windowHeight * 0.5;
 

@@ -1,55 +1,100 @@
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import type { ImageSourcePropType } from "react-native";
 import {
   FlatList,
   Image,
   ListRenderItemInfo,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { CamerasOverlayStack } from "../../components/modals/CamerasOverlayStack";
 import MainPicture from "../../components/MainPicture";
 import { useCameraMenu } from "../../contexts/CameraMenuContext";
+import { COLORS } from "../../theme/colors";
 
-type MenuSection = "objects" | "events" | "mode";
+type MenuSection = "cameras" | "objects" | "events" | "mode";
+type CameraId = "cam-1" | "cam-2" | "cam-3" | "cam-4";
 
-const SUB_NAV_ITEMS: { id: MenuSection; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+type CameraImageItem = {
+  id: string;
+  source: ImageSourcePropType;
+};
+type ObjectId = "people" | "equipment" | "construction";
+
+const SUB_NAV_ITEMS: {
+  id: MenuSection;
+  label: string;
+  icon: "videocam-outline" | "cube-outline" | "calendar-outline" | "settings-outline";
+}[] = [
+  { id: "cameras", label: "Камеры", icon: "videocam-outline" },
   { id: "objects", label: "Объекты", icon: "cube-outline" },
   { id: "events", label: "События", icon: "calendar-outline" },
   { id: "mode", label: "Режим", icon: "settings-outline" },
 ];
 
 const MENU_TITLES: Record<MenuSection, string> = {
+  cameras: "Камеры",
   objects: "Объекты",
   events: "События",
   mode: "Режим",
 };
 
-const CAROUSEL_ITEMS: { id: string; source: ImageSourcePropType }[] = [
-  { id: "people", source: require("../../assets/images/people.png") },
-  { id: "people1", source: require("../../assets/images/people1.webp") },
-  { id: "people2", source: require("../../assets/images/people2.jpg") },
-  { id: "people3", source: require("../../assets/images/people3.jpg") },
+const CAMERA_FILTERS: { id: CameraId; label: string }[] = [
+  { id: "cam-1", label: "Камера 1" },
+  { id: "cam-2", label: "Камера 2" },
+  { id: "cam-3", label: "Камера 3" },
+  { id: "cam-4", label: "Камера 4" },
+];
+const OBJECT_FILTERS: { id: ObjectId; label: string; cameraId: CameraId }[] = [
+  { id: "people", label: "Люди", cameraId: "cam-1" },
+  { id: "equipment", label: "Техника", cameraId: "cam-2" },
+  { id: "construction", label: "Стройплощадка", cameraId: "cam-3" },
 ];
 
+const CAMERA_IMAGES: Record<CameraId, CameraImageItem[]> = {
+  "cam-1": [
+    { id: "people", source: require("../../assets/images/people.png") },
+    { id: "people1", source: require("../../assets/images/people1.webp") },
+    { id: "people2", source: require("../../assets/images/people2.jpg") },
+    { id: "people3", source: require("../../assets/images/people3.jpg") },
+  ],
+  "cam-2": [
+    { id: "car1", source: require("../../assets/images/car1.webp") },
+    { id: "car2", source: require("../../assets/images/car2.webp") },
+    { id: "car3", source: require("../../assets/images/car3.webp") },
+    { id: "car4", source: require("../../assets/images/car4.jpg") },
+  ],
+  "cam-3": [
+    { id: "site1", source: require("../../assets/images/site1.jpg") },
+    { id: "site2", source: require("../../assets/images/site2.jpg") },
+    { id: "site3", source: require("../../assets/images/site3.jpg") },
+    { id: "site4", source: require("../../assets/images/site4.jpg") },
+  ],
+  "cam-4": [],
+};
+const DEEPLINK_CAMERAS: CameraId[] = ["cam-1", "cam-2", "cam-3"];
+
 export default function CamerasScreen() {
+  const { camera } = useLocalSearchParams<{ camera?: string | string[] }>();
   const { registerOpenMenu } = useCameraMenu();
+  const [selectedCameraId, setSelectedCameraId] = useState(CAMERA_FILTERS[0].id);
+  const selectedCamera = CAMERA_FILTERS.find((camera) => camera.id === selectedCameraId) ?? CAMERA_FILTERS[0];
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const mainSource = CAROUSEL_ITEMS[selectedIndex].source;
+  const activeImages = CAMERA_IMAGES[selectedCameraId];
+  const hasActiveImages = activeImages.length > 0;
+  const safeSelectedIndex = Math.min(selectedIndex, Math.max(activeImages.length - 1, 0));
+  const mainSource = hasActiveImages ? activeImages[safeSelectedIndex].source : null;
 
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
+  const [cameraFiltersOpen, setCameraFiltersOpen] = useState(false);
+  const [objectFiltersOpen, setObjectFiltersOpen] = useState(false);
+  const [selectedObjectId, setSelectedObjectId] = useState<ObjectId>("people");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuSection, setMenuSection] = useState<MenuSection>("objects");
-
-  const [objectsGroupByZone, setObjectsGroupByZone] = useState(true);
-  const [objectsShowOffline, setObjectsShowOffline] = useState(false);
+  const [menuSection, setMenuSection] = useState<MenuSection>("cameras");
 
   const [eventsAlertsOnly, setEventsAlertsOnly] = useState(false);
   const [eventsSound, setEventsSound] = useState(true);
@@ -59,9 +104,58 @@ export default function CamerasScreen() {
 
   const onPickMenuSection = useCallback((section: MenuSection) => {
     setHamburgerOpen(false);
+    if (section === "cameras") {
+      requestAnimationFrame(() => setCameraFiltersOpen(true));
+      return;
+    }
+    if (section === "objects") {
+      requestAnimationFrame(() => setObjectFiltersOpen(true));
+      return;
+    }
     setMenuSection(section);
     requestAnimationFrame(() => setMenuOpen(true));
   }, []);
+
+  const onSelectCameraFilter = useCallback((cameraId: string) => {
+    const nextCamera = CAMERA_FILTERS.find((camera) => camera.id === cameraId);
+    if (!nextCamera) {
+      return;
+    }
+    setSelectedCameraId(nextCamera.id);
+    setSelectedIndex(0);
+    setCameraFiltersOpen(false);
+  }, []);
+
+  const onSelectObjectFilter = useCallback((objectId: string) => {
+    const selectedObject = OBJECT_FILTERS.find((item) => item.id === objectId);
+    if (!selectedObject) {
+      return;
+    }
+    setSelectedObjectId(selectedObject.id);
+    setSelectedCameraId(selectedObject.cameraId);
+    setSelectedIndex(0);
+    setObjectFiltersOpen(false);
+  }, []);
+
+  useEffect(() => {
+    const requestedCamera = Array.isArray(camera) ? camera[0] : camera;
+    if (!requestedCamera) {
+      return;
+    }
+    const isSupported = DEEPLINK_CAMERAS.includes(requestedCamera as CameraId);
+    if (!isSupported || requestedCamera === selectedCameraId) {
+      return;
+    }
+    setSelectedCameraId(requestedCamera as CameraId);
+    setSelectedIndex(0);
+  }, [camera, selectedCameraId]);
+
+  useEffect(() => {
+    const linkedObject = OBJECT_FILTERS.find((item) => item.cameraId === selectedCameraId);
+    if (linkedObject) {
+      setSelectedObjectId(linkedObject.id);
+    }
+  }, [selectedCameraId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -71,8 +165,8 @@ export default function CamerasScreen() {
   );
 
   const renderThumb = useCallback(
-    ({ item, index }: ListRenderItemInfo<(typeof CAROUSEL_ITEMS)[number]>) => {
-      const selected = index === selectedIndex;
+    ({ item, index }: ListRenderItemInfo<CameraImageItem>) => {
+      const selected = index === safeSelectedIndex;
       return (
         <Pressable
           onPress={() => setSelectedIndex(index)}
@@ -82,143 +176,62 @@ export default function CamerasScreen() {
         </Pressable>
       );
     },
-    [selectedIndex]
+    [safeSelectedIndex]
   );
 
   return (
     <View style={styles.screen}>
       <View style={styles.mainArea}>
-        <MainPicture source={mainSource} />
+        {mainSource ? (
+          <MainPicture source={mainSource} />
+        ) : (
+          <View style={styles.emptyMain}>
+            <Text style={styles.emptyMainText}>Нет данных для отображения</Text>
+          </View>
+        )}
       </View>
 
-      <FlatList
-        horizontal
-        data={CAROUSEL_ITEMS}
-        keyExtractor={(item) => item.id}
-        renderItem={renderThumb}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.stripContent}
-        style={styles.strip}
-      />
+      {hasActiveImages ? (
+        <FlatList
+          horizontal
+          data={activeImages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderThumb}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.stripContent}
+          style={styles.strip}
+        />
+      ) : null}
 
       <View style={styles.bottomSpacer} />
 
-      <Modal
-        visible={hamburgerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setHamburgerOpen(false)}
-      >
-        <View style={styles.drawerRoot}>
-          <SafeAreaView edges={["top", "bottom", "left"]} style={styles.drawerPanel}>
-            <Text style={styles.drawerTitle}>Меню</Text>
-            {SUB_NAV_ITEMS.map((item) => (
-              <Pressable
-                key={item.id}
-                style={({ pressed }) => [
-                  styles.drawerRow,
-                  pressed && styles.drawerRowPressed,
-                ]}
-                onPress={() => onPickMenuSection(item.id)}
-              >
-                <Ionicons name={item.icon} size={22} color="#C9D1D9" />
-                <Text style={styles.drawerRowLabel}>{item.label}</Text>
-                <Ionicons name="chevron-forward" size={18} color="#6e7681" />
-              </Pressable>
-            ))}
-          </SafeAreaView>
-          <Pressable style={styles.drawerBackdrop} onPress={() => setHamburgerOpen(false)} />
-        </View>
-      </Modal>
-
-      <Modal
-        visible={menuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuOpen(false)}
-      >
-        <View style={styles.modalRoot}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setMenuOpen(false)} />
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{MENU_TITLES[menuSection]}</Text>
-              <Pressable hitSlop={12} onPress={() => setMenuOpen(false)} style={styles.modalClose}>
-                <Ionicons name="close" size={22} color="#AAB6C4" />
-              </Pressable>
-            </View>
-
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              {menuSection === "objects" && (
-                <>
-                  <SettingsRow
-                    label="Группировать по зонам"
-                    value={objectsGroupByZone}
-                    onValueChange={setObjectsGroupByZone}
-                  />
-                  <SettingsRow
-                    label="Показывать офлайн"
-                    value={objectsShowOffline}
-                    onValueChange={setObjectsShowOffline}
-                  />
-                </>
-              )}
-              {menuSection === "events" && (
-                <>
-                  <SettingsRow
-                    label="Только тревоги"
-                    value={eventsAlertsOnly}
-                    onValueChange={setEventsAlertsOnly}
-                  />
-                  <SettingsRow
-                    label="Звук уведомлений"
-                    value={eventsSound}
-                    onValueChange={setEventsSound}
-                  />
-                </>
-              )}
-              {menuSection === "mode" && (
-                <>
-                  <SettingsRow
-                    label="Ночной режим"
-                    value={modeNight}
-                    onValueChange={setModeNight}
-                  />
-                  <SettingsRow
-                    label="Экономия трафика"
-                    value={modeSaveData}
-                    onValueChange={setModeSaveData}
-                  />
-                </>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
-}
-
-function SettingsRow({
-  label,
-  value,
-  onValueChange,
-}: {
-  label: string;
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-}) {
-  return (
-    <View style={styles.settingsRow}>
-      <Text style={styles.settingsLabel}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: "#3d4550", true: "#1f6feb" }}
-        thumbColor="#f0f6fc"
+      <CamerasOverlayStack
+        hamburgerOpen={hamburgerOpen}
+        onCloseHamburger={() => setHamburgerOpen(false)}
+        menuItems={SUB_NAV_ITEMS}
+        onSelectMenuItem={(id) => onPickMenuSection(id as MenuSection)}
+        cameraFiltersOpen={cameraFiltersOpen}
+        onCloseCameraFilters={() => setCameraFiltersOpen(false)}
+        cameraFilterItems={CAMERA_FILTERS.map((camera) => ({ id: camera.id, label: camera.label }))}
+        selectedCameraFilterId={selectedCamera.id}
+        onSelectCameraFilter={onSelectCameraFilter}
+        objectFiltersOpen={objectFiltersOpen}
+        onCloseObjectFilters={() => setObjectFiltersOpen(false)}
+        objectFilterItems={OBJECT_FILTERS.map((item) => ({ id: item.id, label: item.label }))}
+        selectedObjectFilterId={selectedObjectId}
+        onSelectObjectFilter={onSelectObjectFilter}
+        settingsOpen={menuOpen}
+        settingsTitle={MENU_TITLES[menuSection]}
+        settingsSection={menuSection === "events" ? "events" : "mode"}
+        onCloseSettings={() => setMenuOpen(false)}
+        eventsAlertsOnly={eventsAlertsOnly}
+        onChangeEventsAlertsOnly={setEventsAlertsOnly}
+        eventsSound={eventsSound}
+        onChangeEventsSound={setEventsSound}
+        modeNight={modeNight}
+        onChangeModeNight={setModeNight}
+        modeSaveData={modeSaveData}
+        onChangeModeSaveData={setModeSaveData}
       />
     </View>
   );
@@ -229,55 +242,22 @@ const THUMB_SIZE = 72;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f141a",
-  },
-  drawerRoot: {
-    flex: 1,
-    flexDirection: "row",
-  },
-  drawerPanel: {
-    width: "82%",
-    maxWidth: 300,
-    backgroundColor: "#22272B",
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: "#3d4550",
-    paddingHorizontal: 8,
-    paddingBottom: 16,
-  },
-  drawerTitle: {
-    color: "#FAFAFA",
-    fontSize: 18,
-    fontWeight: "700",
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#3d4550",
-    marginBottom: 8,
-  },
-  drawerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  drawerRowPressed: {
-    backgroundColor: "#2d3844",
-  },
-  drawerRowLabel: {
-    flex: 1,
-    color: "#E6EDF3",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  drawerBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: COLORS.background,
   },
   mainArea: {
     alignSelf: "stretch",
     width: "100%",
+  },
+  emptyMain: {
+    width: "100%",
+    height: 220,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyMainText: {
+    color: COLORS.textMuted,
+    fontSize: 16,
+    fontWeight: "600",
   },
   strip: {
     flexGrow: 0,
@@ -303,63 +283,10 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   thumbWrapSelected: {
-    borderColor: "#58a6ff",
+    borderColor: COLORS.accent,
   },
   thumb: {
     width: "100%",
     height: "100%",
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 28,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-  },
-  modalCard: {
-    backgroundColor: "#22272B",
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#3d4550",
-    maxHeight: "52%",
-    overflow: "hidden",
-    zIndex: 1,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#3d4550",
-  },
-  modalTitle: {
-    color: "#FAFAFA",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  modalClose: {
-    padding: 4,
-  },
-  modalScroll: {
-    maxHeight: 280,
-  },
-  settingsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#2d3844",
-  },
-  settingsLabel: {
-    flex: 1,
-    color: "#E6EDF3",
-    fontSize: 15,
   },
 });

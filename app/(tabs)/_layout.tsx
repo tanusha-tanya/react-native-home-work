@@ -1,19 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs, usePathname } from "expo-router";
-import { Pressable } from "react-native";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { SecondaryControlBar } from "../../components/SecondaryControlBar";
 import { TopTitleBar } from "../../components/TopTitleBar";
 import { CameraMenuProvider, useCameraMenu } from "../../contexts/CameraMenuContext";
+import { COLORS } from "../../theme/colors";
 
 function TabsChrome() {
   const pathname = usePathname();
-  const showHamburger = !pathname.includes("statistics");
+  const showHamburger = pathname.endsWith("/(tabs)") || pathname.endsWith("/");
   const { openMenu } = useCameraMenu();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0f141a" }}>
-      <TopTitleBar title="AI.СТВ КРОНШТАДТ" />
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <TopTitleBar title="ВИДЕООБЗОР" />
       <SecondaryControlBar
         dateText="03.09.2025"
         centerAccessory={
@@ -25,7 +25,7 @@ function TabsChrome() {
               onPress={openMenu}
               style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1, padding: 4, borderRadius: 8 }]}
             >
-              <Ionicons name="menu" size={22} color="#E6EDF3" />
+              <Ionicons name="menu" size={22} color={COLORS.textSecondary} />
             </Pressable>
           ) : undefined
         }
@@ -35,15 +35,16 @@ function TabsChrome() {
         <Tabs
           screenOptions={{
             headerShown: false,
-            tabBarStyle: { backgroundColor: "#1b232c", borderTopColor: "transparent" },
-            tabBarActiveTintColor: "#FAFAFA",
-            tabBarInactiveTintColor: "#AAB6C4",
+            tabBarStyle: { backgroundColor: COLORS.tabBar, borderTopColor: "transparent" },
+            tabBarActiveTintColor: COLORS.textPrimary,
+            tabBarInactiveTintColor: COLORS.textMuted,
+            tabBarLabelStyle: { fontSize: 14, fontWeight: "600" },
           }}
         >
           <Tabs.Screen
             name="index"
             options={{
-              title: "Камеры",
+              title: "Видео",
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="camera-outline" size={size} color={color} />
               ),
@@ -57,6 +58,32 @@ function TabsChrome() {
                 <Ionicons name="stats-chart-outline" size={size} color={color} />
               ),
             }}
+          />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: "Личный кабинет",
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="person-outline" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen name="statistics/_layout" options={{ href: null }} />
+          <Tabs.Screen
+            name="statistics/personnel"
+            options={{ href: "/statistics/personnel" }}
+          />
+          <Tabs.Screen
+            name="statistics/equipment"
+            options={{ href: "/statistics/equipment" }}
+          />
+          <Tabs.Screen
+            name="statistics/construction"
+            options={{ href: "/statistics/construction" }}
+          />
+          <Tabs.Screen
+            name="statistics/overall"
+            options={{ href: "/statistics/overall" }}
           />
         </Tabs>
       </View>

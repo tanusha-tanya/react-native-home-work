@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useMemo } from "react";
 
-type Props = {
+type SecondaryControlBarProps = {
   dateText: string;
   centerText?: string;
   /** Контент слева от центральной подписи (напр. гамбургер рядом с LIVE) */
@@ -22,7 +22,7 @@ export function SecondaryControlBar({
   onPressVideo,
   onPressCalendar,
   showVideoIcon = true,
-}: Props) {
+}: SecondaryControlBarProps) {
   const download = useMemo(
     () => ({
       icon: "download-outline" as const,

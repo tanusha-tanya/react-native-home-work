@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type Props = { title: string};
+type TopTitleBarProps = { title: string};
 
-export function TopTitleBar ({ title }: Props){
+export function TopTitleBar ({ title }: TopTitleBarProps){
     return (
         <SafeAreaView edges={["top"]} style={styles.safe}>
             <View style={styles.container}>
