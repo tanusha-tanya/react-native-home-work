@@ -15,8 +15,9 @@ type CamerasOverlayStackProps = {
 
   cameraFiltersOpen: boolean;
   onCloseCameraFilters: () => void;
+  onResetCameraFilter: () => void;
   cameraFilterItems: SimpleFilterItem[];
-  selectedCameraFilterId: string;
+  selectedCameraFilterId: string | null;
   onSelectCameraFilter: (id: string) => void;
 
   objectFiltersOpen: boolean;
@@ -46,6 +47,7 @@ export function CamerasOverlayStack({
   onSelectMenuItem,
   cameraFiltersOpen,
   onCloseCameraFilters,
+  onResetCameraFilter,
   cameraFilterItems,
   selectedCameraFilterId,
   onSelectCameraFilter,
@@ -76,6 +78,7 @@ export function CamerasOverlayStack({
         items={cameraFilterItems}
         selectedId={selectedCameraFilterId}
         onSelect={onSelectCameraFilter}
+        onResetFilter={onResetCameraFilter}
       />
 
       <CameraFiltersDrawer

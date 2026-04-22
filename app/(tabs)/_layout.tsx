@@ -62,29 +62,15 @@ function TabsChrome() {
           <Tabs.Screen
             name="profile"
             options={{
-              title: "Личный кабинет",
-              tabBarIcon: ({ color, size }) => (
-                <Ionicons name="person-outline" size={size} color={color} />
-              ),
+              title: "Профиль",
+              tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
             }}
           />
           <Tabs.Screen name="statistics/_layout" options={{ href: null }} />
-          <Tabs.Screen
-            name="statistics/personnel"
-            options={{ href: "/statistics/personnel" }}
-          />
-          <Tabs.Screen
-            name="statistics/equipment"
-            options={{ href: "/statistics/equipment" }}
-          />
-          <Tabs.Screen
-            name="statistics/construction"
-            options={{ href: "/statistics/construction" }}
-          />
-          <Tabs.Screen
-            name="statistics/overall"
-            options={{ href: "/statistics/overall" }}
-          />
+          <Tabs.Screen name="statistics/personnel" options={{ href: "/statistics/personnel" }} />
+          <Tabs.Screen name="statistics/equipment" options={{ href: "/statistics/equipment" }} />
+          <Tabs.Screen name="statistics/construction" options={{ href: "/statistics/construction" }} />
+          <Tabs.Screen name="statistics/overall" options={{ href: "/statistics/overall" }} />
         </Tabs>
       </View>
     </View>
