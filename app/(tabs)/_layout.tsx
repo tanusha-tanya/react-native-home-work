@@ -4,24 +4,27 @@ import { Pressable, View } from "react-native";
 import { SecondaryControlBar } from "../../components/SecondaryControlBar";
 import { TopTitleBar } from "../../components/TopTitleBar";
 import { CameraMenuProvider, useCameraMenu } from "../../contexts/CameraMenuContext";
+import { useI18n } from "../../contexts/I18nContext";
 import { COLORS } from "../../theme/colors";
 
 function TabsChrome() {
   const pathname = usePathname();
   const showHamburger = pathname.endsWith("/(tabs)") || pathname.endsWith("/");
   const { openMenu } = useCameraMenu();
+  const { t } = useI18n();
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <TopTitleBar title="ВИДЕООБЗОР" />
+      <TopTitleBar title={t("common.videoReview")} />
       <SecondaryControlBar
         dateText="03.09.2025"
+        centerText={t("common.live")}
         centerAccessory={
           showHamburger ? (
             <Pressable
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel="Открыть меню"
+              accessibilityLabel={t("common.openMenu")}
               onPress={openMenu}
               style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1, padding: 4, borderRadius: 8 }]}
             >
@@ -44,7 +47,7 @@ function TabsChrome() {
           <Tabs.Screen
             name="index"
             options={{
-              title: "Видео",
+              title: t("tabs.video"),
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="camera-outline" size={size} color={color} />
               ),
@@ -53,7 +56,7 @@ function TabsChrome() {
           <Tabs.Screen
             name="statistics"
             options={{
-              title: "Статистика",
+              title: t("tabs.statistics"),
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="stats-chart-outline" size={size} color={color} />
               ),
@@ -62,7 +65,7 @@ function TabsChrome() {
           <Tabs.Screen
             name="profile"
             options={{
-              title: "Профиль",
+              title: t("tabs.profile"),
               tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
             }}
           />

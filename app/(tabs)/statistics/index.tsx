@@ -1,11 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { AppText as Text } from "../../../components/ui/AppText";
+import { useI18n } from "../../../contexts/I18nContext";
 import { COLORS } from "../../../theme/colors";
 
 type StatTile = {
   id: string;
-  title: string;
+  titleKey: string;
   icon: keyof typeof Ionicons.glyphMap;
   route: "/statistics/personnel" | "/statistics/equipment" | "/statistics/construction" | "/statistics/overall";
 };
@@ -13,25 +16,25 @@ type StatTile = {
 const TILES: StatTile[] = [
   {
     id: "personnel",
-    title: "Статистика по персоналу",
+    titleKey: "stats.tile.personnel",
     icon: "people-outline",
     route: "/statistics/personnel",
   },
   {
     id: "equipment",
-    title: "Статистика по технике",
+    titleKey: "stats.tile.equipment",
     icon: "car-outline",
     route: "/statistics/equipment",
   },
   {
     id: "construction",
-    title: "Статистика по стройплощадке",
+    titleKey: "stats.tile.construction",
     icon: "home-outline",
     route: "/statistics/construction",
   },
   {
     id: "overall",
-    title: "Общая статистика",
+    titleKey: "stats.tile.overall",
     icon: "stats-chart-outline",
     route: "/statistics/overall",
   },
@@ -39,12 +42,17 @@ const TILES: StatTile[] = [
 
 export default function StatisticsScreen() {
   const router = useRouter();
+  const { t } = useI18n();
+  const tiles = useMemo(
+    () => TILES.map((tile) => ({ ...tile, title: t(tile.titleKey) })),
+    [t]
+  );
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen options={{ title: "Статистика" }} />
+      <Stack.Screen options={{ title: t("stats.root") }} />
       <FlatList
-        data={TILES}
+        data={tiles}
         numColumns={2}
         keyExtractor={(item) => item.id}
         columnWrapperStyle={styles.row}

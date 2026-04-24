@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useI18n } from "../../contexts/I18nContext";
 import { COLORS } from "../../theme/colors";
+import { AppText as Text } from "../ui/AppText";
 
 export type HamburgerMenuItem = {
   id: string;
@@ -22,11 +24,13 @@ export function HamburgerMenuModal({
   items,
   onSelect,
 }: HamburgerMenuModalProps) {
+  const { t } = useI18n();
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.root}>
         <SafeAreaView edges={["top", "bottom", "left"]} style={styles.panel}>
-          <Text style={styles.title}>Меню</Text>
+          <Text style={styles.title}>{t("common.menu")}</Text>
           {items.map((item) => (
             <Pressable
               key={item.id}

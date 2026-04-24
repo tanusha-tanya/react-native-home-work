@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { useI18n } from "../../contexts/I18nContext";
 import { COLORS } from "../../theme/colors";
+import { AppText as Text } from "../ui/AppText";
 
 export type SettingsMenuModalSection = "events" | "mode";
 
@@ -53,6 +55,8 @@ export function SettingsMenuModal({
   modeSaveData,
   onChangeModeSaveData,
 }: SettingsMenuModalProps) {
+  const { t } = useI18n();
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalRoot}>
@@ -73,12 +77,12 @@ export function SettingsMenuModal({
             {section === "events" ? (
               <>
                 <SettingsMenuRow
-                  label="Только тревоги"
+                  label={t("settings.alertsOnly")}
                   value={eventsAlertsOnly}
                   onValueChange={onChangeEventsAlertsOnly}
                 />
                 <SettingsMenuRow
-                  label="Звук уведомлений"
+                  label={t("settings.sound")}
                   value={eventsSound}
                   onValueChange={onChangeEventsSound}
                 />
@@ -86,12 +90,12 @@ export function SettingsMenuModal({
             ) : (
               <>
                 <SettingsMenuRow
-                  label="Ночной режим"
+                  label={t("settings.nightMode")}
                   value={modeNight}
                   onValueChange={onChangeModeNight}
                 />
                 <SettingsMenuRow
-                  label="Экономия трафика"
+                  label={t("settings.saveData")}
                   value={modeSaveData}
                   onValueChange={onChangeModeSaveData}
                 />

@@ -1,5 +1,6 @@
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
 import { COLORS } from "../../theme/colors";
+import { AppText as Text } from "../ui/AppText";
 
 type CameraFiltersHeaderProps = {
   title: string;

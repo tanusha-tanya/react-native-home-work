@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { Dimensions, StyleSheet, Text, View } from "react-native";
+import { Dimensions, StyleSheet, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { COLORS } from "../../theme/colors";
+import { AppText as Text } from "../ui/AppText";
 
 type MonthlyStatsChartProps = {
   title: string;

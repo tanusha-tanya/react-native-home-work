@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useMemo } from "react";
+import { AppText as Text } from "./ui/AppText";
 
 type SecondaryControlBarProps = {
   dateText: string;

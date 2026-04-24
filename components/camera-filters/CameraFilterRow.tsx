@@ -1,24 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { COLORS } from "../../theme/colors";
+import { AppText as Text } from "../ui/AppText";
 import type { CameraFilterItem } from "./types";
 
 type CameraFilterRowProps = {
   item: CameraFilterItem;
-  selected: boolean;
+  checked: boolean;
   onPress: (id: string) => void;
 };
 
-export function CameraFilterRow({ item, selected, onPress }: CameraFilterRowProps) {
+export function CameraFilterRow({ item, checked, onPress }: CameraFilterRowProps) {
   return (
     <Pressable
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
       onPress={() => onPress(item.id)}
     >
       <Ionicons
-        name={selected ? "radio-button-on-outline" : "radio-button-off-outline"}
+        name={checked ? "checkbox-outline" : "square-outline"}
         size={20}
-        color={selected ? COLORS.actionLight : COLORS.iconDisabled}
+        color={checked ? COLORS.actionLight : COLORS.iconDisabled}
       />
       <Text style={styles.rowText}>{item.label}</Text>
     </Pressable>

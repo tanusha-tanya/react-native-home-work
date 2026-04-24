@@ -1,6 +1,6 @@
 import { CameraFiltersDrawer } from "../CameraFiltersDrawer";
+import { useI18n } from "../../contexts/I18nContext";
 import { HamburgerMenuModal, type HamburgerMenuItem } from "./HamburgerMenuModal";
-import { SettingsMenuModal, type SettingsMenuModalSection } from "./SettingsMenuModal";
 
 type SimpleFilterItem = {
   id: string;
@@ -15,29 +15,16 @@ type CamerasOverlayStackProps = {
 
   cameraFiltersOpen: boolean;
   onCloseCameraFilters: () => void;
-  onResetCameraFilter: () => void;
   cameraFilterItems: SimpleFilterItem[];
-  selectedCameraFilterId: string | null;
-  onSelectCameraFilter: (id: string) => void;
+  selectedCameraFilterIds: string[];
+  onToggleCameraFilter: (id: string) => void;
 
   objectFiltersOpen: boolean;
   onCloseObjectFilters: () => void;
   objectFilterItems: SimpleFilterItem[];
-  selectedObjectFilterId: string;
-  onSelectObjectFilter: (id: string) => void;
+  selectedObjectFilterIds: string[];
+  onToggleObjectFilter: (id: string) => void;
 
-  settingsOpen: boolean;
-  settingsTitle: string;
-  settingsSection: SettingsMenuModalSection;
-  onCloseSettings: () => void;
-  eventsAlertsOnly: boolean;
-  onChangeEventsAlertsOnly: (value: boolean) => void;
-  eventsSound: boolean;
-  onChangeEventsSound: (value: boolean) => void;
-  modeNight: boolean;
-  onChangeModeNight: (value: boolean) => void;
-  modeSaveData: boolean;
-  onChangeModeSaveData: (value: boolean) => void;
 };
 
 export function CamerasOverlayStack({
@@ -47,47 +34,35 @@ export function CamerasOverlayStack({
   onSelectMenuItem,
   cameraFiltersOpen,
   onCloseCameraFilters,
-  onResetCameraFilter,
   cameraFilterItems,
-  selectedCameraFilterId,
-  onSelectCameraFilter,
+  selectedCameraFilterIds,
+  onToggleCameraFilter,
   objectFiltersOpen,
   onCloseObjectFilters,
   objectFilterItems,
-  selectedObjectFilterId,
-  onSelectObjectFilter,
-  settingsOpen,
-  settingsTitle,
-  settingsSection,
-  onCloseSettings,
-  eventsAlertsOnly,
-  onChangeEventsAlertsOnly,
-  eventsSound,
-  onChangeEventsSound,
-  modeNight,
-  onChangeModeNight,
-  modeSaveData,
-  onChangeModeSaveData,
+  selectedObjectFilterIds,
+  onToggleObjectFilter,
 }: CamerasOverlayStackProps) {
+  const { t } = useI18n();
+
   return (
     <>
       <CameraFiltersDrawer
         visible={cameraFiltersOpen}
         onClose={onCloseCameraFilters}
-        title="КАМЕРЫ"
+        title={t("filters.cameras")}
         items={cameraFilterItems}
-        selectedId={selectedCameraFilterId}
-        onSelect={onSelectCameraFilter}
-        onResetFilter={onResetCameraFilter}
+        selectedIds={selectedCameraFilterIds}
+        onToggle={onToggleCameraFilter}
       />
 
       <CameraFiltersDrawer
         visible={objectFiltersOpen}
         onClose={onCloseObjectFilters}
-        title="ОБЪЕКТЫ"
+        title={t("filters.objects")}
         items={objectFilterItems}
-        selectedId={selectedObjectFilterId}
-        onSelect={onSelectObjectFilter}
+        selectedIds={selectedObjectFilterIds}
+        onToggle={onToggleObjectFilter}
       />
 
       <HamburgerMenuModal
@@ -95,21 +70,6 @@ export function CamerasOverlayStack({
         onClose={onCloseHamburger}
         items={menuItems}
         onSelect={onSelectMenuItem}
-      />
-
-      <SettingsMenuModal
-        visible={settingsOpen}
-        title={settingsTitle}
-        section={settingsSection}
-        onClose={onCloseSettings}
-        eventsAlertsOnly={eventsAlertsOnly}
-        onChangeEventsAlertsOnly={onChangeEventsAlertsOnly}
-        eventsSound={eventsSound}
-        onChangeEventsSound={onChangeEventsSound}
-        modeNight={modeNight}
-        onChangeModeNight={onChangeModeNight}
-        modeSaveData={modeSaveData}
-        onChangeModeSaveData={onChangeModeSaveData}
       />
     </>
   );

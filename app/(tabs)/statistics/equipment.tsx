@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { MonthlyStatsChart } from "../../../components/charts/MonthlyStatsChart";
+import { useI18n } from "../../../contexts/I18nContext";
 import { COLORS } from "../../../theme/colors";
 
 export default function EquipmentStatisticsScreen() {
+  const { t } = useI18n();
   const valuesByDay = [
     2, 3, 4, 3, 5, 6, 5, 7, 8, 7,
     6, 8, 9, 10, 8, 9, 11, 10, 12, 11,
@@ -12,8 +14,8 @@ export default function EquipmentStatisticsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content} style={styles.screen}>
-      <Stack.Screen options={{ title: "Техника" }} />
-      <MonthlyStatsChart title="Техника по дням месяца" valuesByDay={valuesByDay} yAxisSuffix="" />
+      <Stack.Screen options={{ title: t("stats.equipment") }} />
+      <MonthlyStatsChart title={t("stats.chart.equipment")} valuesByDay={valuesByDay} yAxisSuffix="" />
     </ScrollView>
   );
 }

@@ -1,6 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
+import * as Haptics from "expo-haptics";
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -10,19 +11,21 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   View,
+  Platform,
+  Vibration,
 } from "react-native";
 import { EventsList, type EventItem } from "../../components/events/EventsList";
 import MainPicture from "../../components/MainPicture";
 import { CamerasOverlayStack } from "../../components/modals/CamerasOverlayStack";
+import { AppText as Text } from "../../components/ui/AppText";
 import { useCameraMenu } from "../../contexts/CameraMenuContext";
+import { useI18n } from "../../contexts/I18nContext";
 import { COLORS } from "../../theme/colors";
 import { CAMERA_EVENTS, EVENT_PICTURE_SOURCES } from "./cameraScreen.events.constants";
 import {
   CAMERA_FILTERS,
   DEEPLINK_CAMERAS,
-  MENU_TITLES,
   OBJECT_FILTERS,
   SUB_NAV_ITEMS,
   type CameraId,
@@ -33,22 +36,19 @@ import {
 export default function CamerasScreen() {
   const { camera } = useLocalSearchParams<{ camera?: string | string[] }>();
   const { registerOpenMenu } = useCameraMenu();
-  const [selectedCameraId, setSelectedCameraId] = useState<CameraId | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const thumbsListRef = useRef<FlatList<{ id: string; eventId: string; source: ImageSourcePropType }>>(null);
+  const lastGalleryHapticAtRef = useRef(0);
+  const lastGalleryVisibleIdRef = useRef<string | null>(null);
+  const [selectedCameraIds, setSelectedCameraIds] = useState<CameraId[]>(CAMERA_FILTERS.map((camera) => camera.id));
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const [hamburgerOpen, setHamburgerOpen] = useState(false);
   const [cameraFiltersOpen, setCameraFiltersOpen] = useState(false);
   const [objectFiltersOpen, setObjectFiltersOpen] = useState(false);
-  const [selectedObjectId, setSelectedObjectId] = useState<ObjectId>("people");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuSection, setMenuSection] = useState<MenuSection>("cameras");
-
-  const [eventsAlertsOnly, setEventsAlertsOnly] = useState(false);
-  const [eventsSound, setEventsSound] = useState(true);
-
-  const [modeNight, setModeNight] = useState(false);
-  const [modeSaveData, setModeSaveData] = useState(false);
+  const [selectedObjectIds, setSelectedObjectIds] = useState<ObjectId[]>(OBJECT_FILTERS.map((item) => item.id));
   const [refreshing, setRefreshing] = useState(false);
+  const { t } = useI18n();
 
   const onPickMenuSection = useCallback((section: MenuSection) => {
     setHamburgerOpen(false);
@@ -56,44 +56,26 @@ export default function CamerasScreen() {
       requestAnimationFrame(() => setCameraFiltersOpen(true));
       return;
     }
-    if (section === "objects") {
-      requestAnimationFrame(() => setObjectFiltersOpen(true));
-      return;
-    }
-    setMenuSection(section);
-    requestAnimationFrame(() => setMenuOpen(true));
+    requestAnimationFrame(() => setObjectFiltersOpen(true));
   }, []);
 
-  const onSelectCameraFilter = useCallback((cameraId: string) => {
+  const onToggleCameraFilter = useCallback((cameraId: string) => {
     const nextCamera = CAMERA_FILTERS.find((camera) => camera.id === cameraId);
-    if (!nextCamera) {
-      return;
-    }
-    setSelectedCameraId(nextCamera.id);
-    setSelectedIndex(0);
-    setCameraFiltersOpen(false);
-  }, []);
+    if (!nextCamera) return;
 
-  const onResetCameraFilter = useCallback(() => {
-    setSelectedCameraId(null);
-    setSelectedObjectId("people");
-    setSelectedIndex(0);
-    setCameraFiltersOpen(false);
+    setSelectedCameraIds((prev) =>
+      prev.includes(nextCamera.id) ? prev.filter((id) => id !== nextCamera.id) : [...prev, nextCamera.id]
+    );
+    setSelectedEventId(null);
   }, []);
 
   const resetAllFilters = useCallback(() => {
-    setSelectedCameraId(null);
-    setSelectedObjectId("people");
-    setSelectedIndex(0);
-    setEventsAlertsOnly(false);
-    setEventsSound(true);
-    setModeNight(false);
-    setModeSaveData(false);
+    setSelectedCameraIds(CAMERA_FILTERS.map((camera) => camera.id));
+    setSelectedObjectIds(OBJECT_FILTERS.map((item) => item.id));
+    setSelectedEventId(null);
     setHamburgerOpen(false);
     setCameraFiltersOpen(false);
     setObjectFiltersOpen(false);
-    setMenuOpen(false);
-    setMenuSection("cameras");
   }, []);
 
   const onRefresh = useCallback(() => {
@@ -104,15 +86,17 @@ export default function CamerasScreen() {
     }, 500);
   }, [resetAllFilters]);
 
-  const onSelectObjectFilter = useCallback((objectId: string) => {
+  const onToggleObjectFilter = useCallback((objectId: string) => {
     const selectedObject = OBJECT_FILTERS.find((item) => item.id === objectId);
     if (!selectedObject) {
       return;
     }
-    setSelectedObjectId(selectedObject.id);
-    setSelectedCameraId(selectedObject.cameraId);
-    setSelectedIndex(0);
-    setObjectFiltersOpen(false);
+    setSelectedObjectIds((prev) =>
+      prev.includes(selectedObject.id)
+        ? prev.filter((id) => id !== selectedObject.id)
+        : [...prev, selectedObject.id]
+    );
+    setSelectedEventId(null);
   }, []);
 
   useEffect(() => {
@@ -121,22 +105,12 @@ export default function CamerasScreen() {
       return;
     }
     const isSupported = DEEPLINK_CAMERAS.includes(requestedCamera as CameraId);
-    if (!isSupported || requestedCamera === selectedCameraId) {
+    if (!isSupported) {
       return;
     }
-    setSelectedCameraId(requestedCamera as CameraId);
-    setSelectedIndex(0);
-  }, [camera, selectedCameraId]);
-
-  useEffect(() => {
-    if (selectedCameraId == null) {
-      return;
-    }
-    const linkedObject = OBJECT_FILTERS.find((item) => item.cameraId === selectedCameraId);
-    if (linkedObject) {
-      setSelectedObjectId(linkedObject.id);
-    }
-  }, [selectedCameraId]);
+    setSelectedCameraIds([requestedCamera as CameraId]);
+    setSelectedEventId(null);
+  }, [camera]);
 
   useFocusEffect(
     useCallback(() => {
@@ -165,35 +139,122 @@ export default function CamerasScreen() {
   };
 
   const sortedEvents = [...events].sort((a, b) => parseEventDateTime(b.dateTime) - parseEventDateTime(a.dateTime));
-  const visibleEvents =
-    selectedCameraId == null
-      ? sortedEvents
-      : sortedEvents.filter((eventItem) => eventItem.cameraId === selectedCameraId);
+  const visibleEvents = sortedEvents.filter(
+    (eventItem) =>
+      selectedCameraIds.includes(eventItem.cameraId as CameraId) &&
+      selectedObjectIds.includes(eventItem.objectId as ObjectId)
+  );
+
+  useEffect(() => {
+    if (visibleEvents.length === 0) {
+      setSelectedEventId(null);
+      return;
+    }
+    const exists = selectedEventId != null && visibleEvents.some((eventItem) => eventItem.id === selectedEventId);
+    if (!exists) {
+      setSelectedEventId(visibleEvents[0].id);
+    }
+  }, [visibleEvents, selectedEventId]);
 
   const activeImages = visibleEvents
-    .map((eventItem) => ({ id: `${eventItem.id}-img`, source: EVENT_PICTURE_SOURCES[eventItem.picture] }))
+    .map((eventItem) => ({
+      id: `${eventItem.id}-img`,
+      eventId: eventItem.id,
+      source: EVENT_PICTURE_SOURCES[eventItem.picture],
+    }))
     .filter((item) => !!item.source);
+  const selectedImage = activeImages.find((image) => image.eventId === selectedEventId) ?? null;
   const hasActiveImages = activeImages.length > 0;
-  const safeSelectedIndex = Math.min(selectedIndex, Math.max(activeImages.length - 1, 0));
-  const mainSource = hasActiveImages ? activeImages[safeSelectedIndex].source : null;
+  const mainSource = selectedImage?.source ?? null;
+
+  useEffect(() => {
+    if (!selectedEventId || activeImages.length === 0) {
+      return;
+    }
+
+    const selectedThumbIndex = activeImages.findIndex((image) => image.eventId === selectedEventId);
+    if (selectedThumbIndex < 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      thumbsListRef.current?.scrollToIndex({
+        index: selectedThumbIndex,
+        animated: true,
+        viewPosition: 0.5,
+      });
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [activeImages, selectedEventId]);
+
+  const scrollToMainPicture = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
+  const onSelectEvent = useCallback(
+    (eventId: string) => {
+      if (Platform.OS === "android") {
+        Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm).catch(() =>
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
+        );
+        Vibration.vibrate(12);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+      }
+      setSelectedEventId(eventId);
+      requestAnimationFrame(scrollToMainPicture);
+    },
+    [scrollToMainPicture]
+  );
+  const triggerGalleryHaptic = useCallback(() => {
+    const now = Date.now();
+    if (now - lastGalleryHapticAtRef.current < 90) {
+      return;
+    }
+    lastGalleryHapticAtRef.current = now;
+    if (Platform.OS === "android") {
+      Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Segment_Frequent_Tick).catch(() =>
+        Haptics.selectionAsync().catch(() => undefined)
+      );
+      Vibration.vibrate(6);
+      return;
+    }
+    Haptics.selectionAsync().catch(() => undefined);
+  }, []);
+  const galleryViewabilityConfigRef = useRef({ viewAreaCoveragePercentThreshold: 60 });
+  const onGalleryViewableItemsChangedRef = useRef(
+    ({
+      viewableItems,
+    }: {
+      viewableItems: Array<{ item?: { id: string; eventId: string; source: ImageSourcePropType } }>;
+    }) => {
+      const firstVisible = viewableItems[0]?.item?.id ?? null;
+      if (!firstVisible || firstVisible === lastGalleryVisibleIdRef.current) {
+        return;
+      }
+      lastGalleryVisibleIdRef.current = firstVisible;
+      triggerGalleryHaptic();
+    }
+  );
   const renderThumb = useCallback(
-    ({ item, index }: ListRenderItemInfo<{ id: string; source: ImageSourcePropType }>) => {
-      const selected = index === safeSelectedIndex;
+    ({ item }: ListRenderItemInfo<{ id: string; eventId: string; source: ImageSourcePropType }>) => {
+      const selected = item.eventId === selectedEventId;
       return (
         <Pressable
-          onPress={() => setSelectedIndex(index)}
+          onPress={() => onSelectEvent(item.eventId)}
           style={[styles.thumbWrap, selected && styles.thumbWrapSelected]}
         >
           <Image source={item.source} style={styles.thumb} resizeMode="cover" />
         </Pressable>
       );
     },
-    [safeSelectedIndex]
+    [onSelectEvent, selectedEventId]
   );
 
   return (
     <View style={styles.screen}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -205,58 +266,64 @@ export default function CamerasScreen() {
             <MainPicture source={mainSource} />
           ) : (
             <View style={styles.emptyMain}>
-              <Text style={styles.emptyMainText}>Нет данных для отображения</Text>
+              <Text style={styles.emptyMainText}>{t("common.noData")}</Text>
             </View>
           )}
         </View>
 
         {hasActiveImages ? (
           <FlatList
+            ref={thumbsListRef}
             horizontal
             data={activeImages}
             keyExtractor={(item) => item.id}
             renderItem={renderThumb}
+            onScrollBeginDrag={triggerGalleryHaptic}
+            onViewableItemsChanged={onGalleryViewableItemsChangedRef.current}
+            viewabilityConfig={galleryViewabilityConfigRef.current}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.stripContent}
             style={styles.strip}
+            onScrollToIndexFailed={(info) => {
+              thumbsListRef.current?.scrollToOffset({
+                offset: info.averageItemLength * info.index,
+                animated: false,
+              });
+              setTimeout(() => {
+                thumbsListRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: true,
+                  viewPosition: 0.5,
+                });
+              }, 50);
+            }}
           />
         ) : null}
 
         <EventsList
-          title="События"
-          events={visibleEvents}
-          alertsOnly={eventsAlertsOnly}
+          title={t("common.events")}
+          events={visibleEvents.map((eventItem) => ({ ...eventItem, title: t(eventItem.title) }))}
+          alertsOnly={false}
+          selectedEventId={selectedEventId}
+          onSelectEvent={onSelectEvent}
         />
       </ScrollView>
 
       <CamerasOverlayStack
         hamburgerOpen={hamburgerOpen}
         onCloseHamburger={() => setHamburgerOpen(false)}
-        menuItems={SUB_NAV_ITEMS}
+        menuItems={SUB_NAV_ITEMS.map((item) => ({ ...item, label: t(item.labelKey) }))}
         onSelectMenuItem={(id) => onPickMenuSection(id as MenuSection)}
         cameraFiltersOpen={cameraFiltersOpen}
         onCloseCameraFilters={() => setCameraFiltersOpen(false)}
-        onResetCameraFilter={onResetCameraFilter}
-        cameraFilterItems={CAMERA_FILTERS.map((camera) => ({ id: camera.id, label: camera.label }))}
-        selectedCameraFilterId={selectedCameraId}
-        onSelectCameraFilter={onSelectCameraFilter}
+        cameraFilterItems={CAMERA_FILTERS.map((camera) => ({ id: camera.id, label: t(camera.labelKey) }))}
+        selectedCameraFilterIds={selectedCameraIds}
+        onToggleCameraFilter={onToggleCameraFilter}
         objectFiltersOpen={objectFiltersOpen}
         onCloseObjectFilters={() => setObjectFiltersOpen(false)}
-        objectFilterItems={OBJECT_FILTERS.map((item) => ({ id: item.id, label: item.label }))}
-        selectedObjectFilterId={selectedObjectId}
-        onSelectObjectFilter={onSelectObjectFilter}
-        settingsOpen={menuOpen}
-        settingsTitle={MENU_TITLES[menuSection]}
-        settingsSection={menuSection === "events" ? "events" : "mode"}
-        onCloseSettings={() => setMenuOpen(false)}
-        eventsAlertsOnly={eventsAlertsOnly}
-        onChangeEventsAlertsOnly={setEventsAlertsOnly}
-        eventsSound={eventsSound}
-        onChangeEventsSound={setEventsSound}
-        modeNight={modeNight}
-        onChangeModeNight={setModeNight}
-        modeSaveData={modeSaveData}
-        onChangeModeSaveData={setModeSaveData}
+        objectFilterItems={OBJECT_FILTERS.map((item) => ({ id: item.id, label: t(item.labelKey) }))}
+        selectedObjectFilterIds={selectedObjectIds}
+        onToggleObjectFilter={onToggleObjectFilter}
       />
     </View>
   );

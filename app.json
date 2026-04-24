@@ -32,6 +32,15 @@
     "plugins": [
       "expo-router",
       [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf",
+            "./assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf"
+          ]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

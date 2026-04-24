@@ -1,7 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FlatList, Modal, Platform, Pressable, StyleSheet, Vibration, View } from "react-native";
+import { useI18n } from "../../contexts/I18nContext";
 import { COLORS } from "../../theme/colors";
+import { AppText as Text } from "../ui/AppText";
 
 export type EventSeverity = "alert" | "info";
 
@@ -21,22 +24,98 @@ type EventsListProps = {
   title?: string;
   events: EventItem[];
   alertsOnly: boolean;
+  selectedEventId?: string | null;
+  onSelectEvent?: (eventId: string) => void;
 };
 
-export function EventsList({ title = "События", events, alertsOnly }: EventsListProps) {
+export function EventsList({
+  title,
+  events,
+  alertsOnly,
+  selectedEventId,
+  onSelectEvent,
+}: EventsListProps) {
+  const { t } = useI18n();
+  const actualTitle = title ?? t("common.events");
   const [open, setOpen] = useState(false);
+  const listRef = useRef<FlatList<EventItem>>(null);
+  const lastHapticAtRef = useRef(0);
+  const lastVisibleEventIdRef = useRef<string | null>(null);
   const filteredEvents = useMemo(
     () => (alertsOnly ? events.filter((eventItem) => eventItem.severity === "alert") : events),
     [alertsOnly, events]
   );
+  const selectedIndex = useMemo(
+    () => filteredEvents.findIndex((eventItem) => eventItem.id === selectedEventId),
+    [filteredEvents, selectedEventId]
+  );
+
+  const triggerScrollHaptic = useCallback(() => {
+    const now = Date.now();
+    if (now - lastHapticAtRef.current < 90) {
+      return;
+    }
+    lastHapticAtRef.current = now;
+
+    if (Platform.OS === "android") {
+      Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Segment_Frequent_Tick).catch(() =>
+        Haptics.selectionAsync().catch(() => undefined)
+      );
+      Vibration.vibrate(6);
+      return;
+    }
+
+    Haptics.selectionAsync().catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!open || selectedIndex < 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToIndex({
+        index: selectedIndex,
+        animated: false,
+        viewPosition: 0.5,
+      });
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [open, selectedIndex]);
+
+  const triggerPressHaptic = useCallback(() => {
+    if (Platform.OS === "android") {
+      Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm).catch(() =>
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
+      );
+      Vibration.vibrate(12);
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+  }, []);
+
+  const viewabilityConfigRef = useRef({ viewAreaCoveragePercentThreshold: 60 });
+  const onViewableItemsChangedRef = useRef(({ viewableItems }: { viewableItems: Array<{ item?: EventItem }> }) => {
+    const firstVisible = viewableItems[0]?.item?.id ?? null;
+    if (!firstVisible || firstVisible === lastVisibleEventIdRef.current) {
+      return;
+    }
+    lastVisibleEventIdRef.current = firstVisible;
+    triggerScrollHaptic();
+  });
 
   return (
     <>
       <Pressable
         style={({ pressed }) => [styles.bar, pressed && styles.barPressed]}
-        onPress={() => setOpen(true)}
+        onPress={() => {
+          triggerPressHaptic();
+          setOpen(true);
+        }}
       >
-        <Text style={styles.barTitle}>{title}</Text>
+        <Text style={styles.barTitle}>{actualTitle}</Text>
         <View style={styles.barRight}>
           <Text style={styles.barCount}>{filteredEvents.length}</Text>
           <Ionicons name="chevron-up" size={18} color={COLORS.iconSubtle} />
@@ -48,35 +127,65 @@ export function EventsList({ title = "События", events, alertsOnly }: Eve
           <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{title}</Text>
+              <Text style={styles.sheetTitle}>{actualTitle}</Text>
               <Pressable hitSlop={12} onPress={() => setOpen(false)}>
                 <Ionicons name="close" size={22} color={COLORS.textMuted} />
               </Pressable>
             </View>
 
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-              {filteredEvents.length === 0 ? (
-                <Text style={styles.emptyText}>Нет событий по выбранным фильтрам</Text>
-              ) : (
-                filteredEvents.map((eventItem) => (
-                  <View key={eventItem.id} style={styles.item}>
-                    <View style={styles.itemLeft}>
-                      <Ionicons
-                        name={
-                          eventItem.severity === "alert"
-                            ? "warning-outline"
-                            : "information-circle-outline"
-                        }
-                        size={18}
-                        color={eventItem.severity === "alert" ? COLORS.actionLight : COLORS.icon}
-                      />
-                      <Text style={styles.itemTitle}>{eventItem.title}</Text>
-                    </View>
-                    <Text style={styles.itemTime}>{eventItem.dateTime}</Text>
+            <FlatList
+              ref={listRef}
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              data={filteredEvents}
+              keyExtractor={(item) => item.id}
+              onScrollBeginDrag={triggerScrollHaptic}
+              onViewableItemsChanged={onViewableItemsChangedRef.current}
+              viewabilityConfig={viewabilityConfigRef.current}
+              onScrollToIndexFailed={(info) => {
+                listRef.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: false,
+                });
+                setTimeout(() => {
+                  listRef.current?.scrollToIndex({
+                    index: info.index,
+                    animated: false,
+                    viewPosition: 0.5,
+                  });
+                }, 50);
+              }}
+              renderItem={({ item: eventItem }) => (
+                <Pressable
+                  key={eventItem.id}
+                  style={({ pressed }) => [
+                    styles.item,
+                    eventItem.id === selectedEventId && styles.itemSelected,
+                    pressed && styles.itemPressed,
+                  ]}
+                  onPress={() => {
+                    triggerPressHaptic();
+                    onSelectEvent?.(eventItem.id);
+                    setOpen(false);
+                  }}
+                >
+                  <View style={styles.itemLeft}>
+                    <Ionicons
+                      name={
+                        eventItem.severity === "alert"
+                          ? "warning-outline"
+                          : "information-circle-outline"
+                      }
+                      size={18}
+                      color={eventItem.severity === "alert" ? COLORS.actionLight : COLORS.icon}
+                    />
+                    <Text style={styles.itemTitle}>{eventItem.title}</Text>
                   </View>
-                ))
+                  <Text style={styles.itemTime}>{eventItem.dateTime}</Text>
+                </Pressable>
               )}
-            </ScrollView>
+              ListEmptyComponent={<Text style={styles.emptyText}>{t("events.empty")}</Text>}
+            />
           </View>
         </View>
       </Modal>
@@ -163,6 +272,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.borderSoft,
+  },
+  itemPressed: {
+    opacity: 0.9,
+  },
+  itemSelected: {
+    backgroundColor: COLORS.borderSoft,
   },
   itemLeft: {
     flexDirection: "row",
