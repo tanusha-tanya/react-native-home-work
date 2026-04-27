@@ -1,7 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import { useI18n } from "../contexts/I18nContext";
 import { AppText as Text } from "./ui/AppText";
 
 type SecondaryControlBarProps = {
@@ -16,7 +21,7 @@ type SecondaryControlBarProps = {
 };
 
 export function SecondaryControlBar({
-  dateText,
+  dateText: _dateText,
   centerText = "LIVE",
   centerAccessory,
   onPressDownload,
@@ -24,6 +29,69 @@ export function SecondaryControlBar({
   onPressCalendar,
   showVideoIcon = true,
 }: SecondaryControlBarProps) {
+  const { t } = useI18n();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  const isDatePickerSupported = Platform.OS !== "web";
+
+  const dateText = useMemo(
+    () =>
+      new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(selectedDate),
+    [selectedDate]
+  );
+
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    if (event.type === "dismissed") {
+      setDatePickerVisible(false);
+      return;
+    }
+
+    if (date) {
+      setSelectedDate(date);
+    }
+    setDatePickerVisible(false);
+  };
+
+  const handleDatePress = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: selectedDate,
+        mode: "date",
+        design: "material",
+        title: t("common.selectDate"),
+        positiveButton: {
+          label: t("common.done"),
+        },
+        negativeButton: {
+          label: t("common.cancel"),
+        },
+        onChange: handleDateChange,
+      });
+      return;
+    }
+
+    if (isDatePickerSupported) {
+      setDatePickerVisible(true);
+      return;
+    }
+
+    // Web fallback: browser prompt with ISO date input.
+    const isoDefault = selectedDate.toISOString().slice(0, 10);
+    const entered = window.prompt("Enter date (YYYY-MM-DD)", isoDefault);
+    if (!entered) {
+      return;
+    }
+
+    const parsed = new Date(`${entered}T00:00:00`);
+    if (!Number.isNaN(parsed.getTime())) {
+      setSelectedDate(parsed);
+    }
+  };
+
   const download = useMemo(
     () => ({
       icon: "download-outline" as const,
@@ -50,13 +118,13 @@ export function SecondaryControlBar({
 
   return (
     <View style={styles.bar}>
-      <Text style={styles.date}>{dateText}</Text>
-
-      <View style={styles.centerWrap}>
-        {centerAccessory != null ? (
+     {centerAccessory != null ? (
           <View style={styles.centerAccessory}>{centerAccessory}</View>
         ) : null}
         <Text style={styles.center}>{centerText}</Text>
+
+      <View style={styles.centerWrap}>
+        <Text style={styles.date}>{dateText}</Text>        
       </View>
 
       <View style={styles.actions}>
@@ -77,7 +145,42 @@ export function SecondaryControlBar({
             <Ionicons name={calendar.icon} size={20} color="#C9D1D9" />
           </Pressable>
         )}
+
+        <Pressable
+          hitSlop={10}
+          onPress={handleDatePress}
+        >
+          <Ionicons name="calendar-outline" size={20} color="#C9D1D9" />
+        </Pressable>
       </View>
+
+      {isDatePickerVisible && isDatePickerSupported && (
+        Platform.OS === "ios" ? (
+          <Modal
+            transparent
+            animationType="slide"
+            visible={isDatePickerVisible}
+            onRequestClose={() => setDatePickerVisible(false)}
+          >
+            <View style={styles.modalBackdrop}>
+              <View style={styles.modalContent}>
+                <Pressable
+                  style={styles.modalDone}
+                  onPress={() => setDatePickerVisible(false)}
+                >
+                  <Text style={styles.modalDoneText}>{t("common.done")}</Text>
+                </Pressable>
+                <DateTimePicker
+                  mode="date"
+                  display="spinner"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                />
+              </View>
+            </View>
+          </Modal>
+        ) : null
+      )}
     </View>
   );
 }
@@ -119,6 +222,29 @@ const styles = StyleSheet.create({
     gap: 14,
     width: 90,
     justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+  },
+  modalContent: {
+    backgroundColor: "#1B1F23",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
+    paddingHorizontal: 12,
+  },
+  modalDone: {
+    alignSelf: "flex-end",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  modalDoneText: {
+    color: "#7FB6FF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 
