@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { AppText as Text } from "../../components/ui/AppText";
 import { useI18n } from "../../contexts/I18nContext";
 import { COLORS } from "../../theme/colors";
@@ -8,6 +8,7 @@ import { COLORS } from "../../theme/colors";
 export default function ProfileScreen() {
   const { languagePreference, setLanguagePreference, t } = useI18n();
   const [locationText, setLocationText] = useState<string>("");
+  const [name, setName] = useState<string>("");
 
   const requestLocation = async () => {
     try {
@@ -47,7 +48,11 @@ export default function ProfileScreen() {
   return (
     <View style={styles.screen}>
       <Text style={styles.title}>{t("profile.title")}</Text>
-
+      <View style={styles.block}>
+        <Text style={styles.sectionTitle}>{t("profile.name")}: {name} <Text style={styles.sectionTitle}>{t("profile.name.success")}</Text></Text>
+        <TextInput style={styles.input} placeholder={t("profile.name")} value={name} onChangeText={setName} />
+          {name && name.length > 0 ? <Text style={styles.sectionTitle}>{t("profile.name.success")}</Text> : <Text style={styles.sectionTitle}>{t("profile.name.error")}</Text>}
+      </View>
       <View style={styles.block}>
         <Text style={styles.sectionTitle}>{t("profile.language")}</Text>
         <View style={styles.optionsRow}>
@@ -145,5 +150,14 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    padding: 10,
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: "500",
   },
 });

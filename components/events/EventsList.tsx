@@ -51,6 +51,9 @@ export function EventsList({
   );
 
   const triggerScrollHaptic = useCallback(() => {
+    if (Platform.OS === "web") {
+      return;
+    }
     const now = Date.now();
     if (now - lastHapticAtRef.current < 90) {
       return;
@@ -85,6 +88,9 @@ export function EventsList({
   }, [open, selectedIndex]);
 
   const triggerPressHaptic = useCallback(() => {
+    if (Platform.OS === "web") {
+      return;
+    }
     if (Platform.OS === "android") {
       Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm).catch(() =>
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)

@@ -22,7 +22,7 @@ import { AppText as Text } from "../../components/ui/AppText";
 import { useCameraMenu } from "../../contexts/CameraMenuContext";
 import { useI18n } from "../../contexts/I18nContext";
 import { COLORS } from "../../theme/colors";
-import { CAMERA_EVENTS, EVENT_PICTURE_SOURCES } from "./cameraScreen.events.constants";
+import { CAMERA_EVENTS, EVENT_PICTURE_SOURCES } from "../../constants/cameraScreen.events.constants";
 import {
   CAMERA_FILTERS,
   DEEPLINK_CAMERAS,
@@ -31,7 +31,7 @@ import {
   type CameraId,
   type MenuSection,
   type ObjectId,
-} from "./cameraScreen.constants";
+} from "../../constants/cameraScreen.constants";
 
 export default function CamerasScreen() {
   const { camera } = useLocalSearchParams<{ camera?: string | string[] }>();
@@ -193,6 +193,11 @@ export default function CamerasScreen() {
   }, []);
   const onSelectEvent = useCallback(
     (eventId: string) => {
+      if (Platform.OS === "web") {
+        setSelectedEventId(eventId);
+        requestAnimationFrame(scrollToMainPicture);
+        return;
+      }
       if (Platform.OS === "android") {
         Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm).catch(() =>
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined)
@@ -207,6 +212,9 @@ export default function CamerasScreen() {
     [scrollToMainPicture]
   );
   const triggerGalleryHaptic = useCallback(() => {
+    if (Platform.OS === "web") {
+      return;
+    }
     const now = Date.now();
     if (now - lastGalleryHapticAtRef.current < 90) {
       return;

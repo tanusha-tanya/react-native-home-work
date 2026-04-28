@@ -42,6 +42,7 @@ function TabsChrome() {
             tabBarActiveTintColor: COLORS.textPrimary,
             tabBarInactiveTintColor: COLORS.textMuted,
             tabBarLabelStyle: { fontSize: 14, fontWeight: "600" },
+            animation: "fade",
           }}
         >
           <Tabs.Screen
@@ -51,6 +52,7 @@ function TabsChrome() {
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="camera-outline" size={size} color={color} />
               ),
+              animation: "fade",
             }}
           />
           <Tabs.Screen
@@ -60,6 +62,7 @@ function TabsChrome() {
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="stats-chart-outline" size={size} color={color} />
               ),
+              animation: "fade",
             }}
           />
           <Tabs.Screen
@@ -67,13 +70,9 @@ function TabsChrome() {
             options={{
               title: t("tabs.profile"),
               tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+              animation: "fade",
             }}
           />
-          <Tabs.Screen name="statistics/_layout" options={{ href: null }} />
-          <Tabs.Screen name="statistics/personnel" options={{ href: "/statistics/personnel" }} />
-          <Tabs.Screen name="statistics/equipment" options={{ href: "/statistics/equipment" }} />
-          <Tabs.Screen name="statistics/construction" options={{ href: "/statistics/construction" }} />
-          <Tabs.Screen name="statistics/overall" options={{ href: "/statistics/overall" }} />
         </Tabs>
       </View>
     </View>

@@ -1,5 +1,5 @@
 import type { ImageSourcePropType } from "react-native";
-import type { EventItem } from "../../components/events/EventsList";
+import type { EventItem } from "../components/events/EventsList";
 
 export const CAMERA_EVENTS: EventItem[] = [
   { id: "e1", cameraId: "cam-1", title: "event.motionEntrance", dateTime: "22.04 09:12", severity: "alert", objectId: "people", picture: "people.png" },
@@ -17,16 +17,16 @@ export const CAMERA_EVENTS: EventItem[] = [
 ];
 
 export const EVENT_PICTURE_SOURCES: Record<string, ImageSourcePropType> = {
-  "people.png": require("../../assets/images/people.png"),
-  "people1.webp": require("../../assets/images/people1.webp"),
-  "people2.jpg": require("../../assets/images/people2.jpg"),
-  "people3.jpg": require("../../assets/images/people3.jpg"),
-  "car.webp": require("../../assets/images/car1.webp"),
-  "car1.webp": require("../../assets/images/car1.webp"),
-  "car2.webp": require("../../assets/images/car2.webp"),
-  "car3.jpg": require("../../assets/images/car3.webp"),
-  "site1.jpg": require("../../assets/images/site1.jpg"),
-  "site2.jpg": require("../../assets/images/site2.jpg"),
-  "site3.jpg": require("../../assets/images/site3.jpg"),
-  "site4.jpg": require("../../assets/images/site4.jpg"),
+  "people.png": require("../assets/images/people.png"),
+  "people1.webp": require("../assets/images/people1.webp"),
+  "people2.jpg": require("../assets/images/people2.jpg"),
+  "people3.jpg": require("../assets/images/people3.jpg"),
+  "car.webp": require("../assets/images/car1.webp"),
+  "car1.webp": require("../assets/images/car1.webp"),
+  "car2.webp": require("../assets/images/car2.webp"),
+  "car3.jpg": require("../assets/images/car3.webp"),
+  "site1.jpg": require("../assets/images/site1.jpg"),
+  "site2.jpg": require("../assets/images/site2.jpg"),
+  "site3.jpg": require("../assets/images/site3.jpg"),
+  "site4.jpg": require("../assets/images/site4.jpg"),
 };
